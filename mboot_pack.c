@@ -19,6 +19,12 @@
 static int get_block_index(const char *filename);
 
 // Flags on each block are poorly understood at this point...
+
+// New theory: looks like the second set of flags may be a version number. mboot version is '160'
+// and versions in some other files seem older...
+//
+// TODO: Check if older firmware updates will apply over newer ones
+//       Check if changing initial set of flags alters the "format partition after install" behaviour?
 static const char *flags[] = {
   "1100160\0", // 0 = mboot
   "11018180", // 1 = configfile
