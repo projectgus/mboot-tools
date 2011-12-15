@@ -197,3 +197,10 @@ def pack_osk(output_file, sources):
             m.close()
         os.close(fd)
 
+
+def copy_sd(osk_file, sd_device):
+    with open(osk_file, "r") as r:
+        with open(sd_device, "w") as w:
+            w.write("update")
+            w.write(chr(0) * (512*1024-len("update")))
+            w.write(r.read())
