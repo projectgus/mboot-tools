@@ -7,7 +7,7 @@
 # VERY HIGH CHANCE OF BRICKING YOUR DEVICE. NOT MY FAULT IF YOU DO.
 
 from ctypes import *
-import mmap, os, sys, binascii, zlib, math
+import mmap, os, sys
 
 MAGIC = (0x33, 0x78, 0x34, 0x62)
 UNKNOWN = (0x81, 0x07, 0x00, 0x00)
@@ -89,9 +89,14 @@ class OskHeader(Structure):
 
 def mboot_crc(data):
     """
-    Currently wrong, needs to become mboot's crc algo
+    mboot has the most naive crc format ever - sum the individual bytes!!! woo!!!
     """
-    return binascii.crc32(data) & 0xffffffff
+    MASK = 0xffffffff
+
+    result = 0
+    for offs in range(0, len(data), 1):
+        result += c_uint8.from_buffer_copy(data, offs).value
+    return result & MASK
 
 def extract_osk(osk_file, force=False):
     def try_error(msg):
