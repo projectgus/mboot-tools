@@ -1,6 +1,11 @@
+// Header information for .osk file format (mesada mboot bootloader)
+//
+// Created by blackbox reverse engineering only. 100% unofficial, may be wrong, probably incomplete.
+//
+// Copyright (c) Angus Gratton 2011 Licensed under the new BSD License
+
 #include <stdio.h>
 #include <stdint.h>
-
 
 #define MAGIC 0x62347833
 

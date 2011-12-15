@@ -1,3 +1,20 @@
+// Pack a supplied list of files together into an .osk format
+// for the mesada mboot bootloader
+
+// Assumption is that files will be equivalent to the ones product by mboot_extract,
+// in particular that file names will start with the names of .osk "block" that
+// they are to be copied to. ie mboot.bin, kernel.bin, etc. 
+// (a full list of block names can be found in mboot.h.)
+//
+//
+// Created by blackbox reverse engineering only. 100% unofficial, may be wrong, probably incomplete.
+//
+// ABSOLUTELY NO WARRANTY. FIRMWARE UPDATES CREATED BY THIS FILE MAY NOT WORK AND
+// ARE QUITE LIKELY TO BRICK YOUR DEVICE. USE WITH ABSOLUTELY EXTREME CAUTION.
+//
+// Copyright (c) Angus Gratton 2011 Licensed under the new BSD License
+
+
 #include "mboot.h"
 #include <sys/mman.h>
 #include <sys/types.h>
@@ -8,10 +25,6 @@
 #include <string.h>
 #include <libgen.h>
 
-// Pack a supplied list of files together into an .osk
-
-// Assumption is that files will be equivalent to the ones product by mboot_extract,
-// in particular that file names will start with the names of .osk "blocks" ie mboot.bin, kernel.bin, etc.
 
 #define handle_error(msg)                                       \
   do { perror(msg); return 2; } while (0)
@@ -147,7 +160,10 @@ static int get_block_index(const char *filename)
 
 int main(int argc, const char **argv) {
   if(argc < 3) {
-    fprintf(stderr, "Usage: %s [--for-sd] <osk output file> <input files>...\n", argv[0]);
+    fprintf(stderr, "Usage: %s [--for-sd] <osk output file> <input files>...\n\n", argv[0]);
+    fprintf(stderr, "FIRMWARE UPDATES CREATED BY THIS PROGRAM MAY NOT WORK AND\n");
+    fprintf(stderr, "ARE QUITE LIKELY TO BRICK YOUR DEVICE. USE ONLY WITH ABSOLUTELY EXTREME CAUTION.\n");
+    return 1;
   }
 
   int for_sd = !strcmp(argv[1], "--for-sd");

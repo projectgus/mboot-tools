@@ -6,7 +6,11 @@
 #include <unistd.h>
 #include <string.h>
 
-// Extract a .osk file to various .bin files
+// Extract a .osk file (mesada mboot bootloader) and create various .bin files
+//
+// Created by blackbox reverse engineering only. 100% unofficial, may be wrong, probably incomplete.
+//
+// Copyright (c) Angus Gratton 2011 Licensed under the new BSD License
 
 #define handle_error(msg)                                       \
   do { perror(msg); return 2; } while (0)
