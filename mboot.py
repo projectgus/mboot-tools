@@ -126,13 +126,13 @@ def extract_osk(osk_file, force=False):
             print "Extracting %s" % filename
             if os.path.exists(filename):
                 try_error("%s already exists" % filename)
+            start = d.start*512
+            data = m[start:start+d.length]
+            checksum = mboot_crc(data)
+            file_checksum = c_uint32.from_buffer_copy(m, start+d.length).value
+            if checksum != file_checksum:
+                try_error("Stored OSK checksum (0x%08x) does not match calculated checksum (0x%08x)" % (file_checksum, checksum))
             with open(filename, "w") as w:
-                start = d.start*512
-                data = m[start:start+d.length]
-                checksum = mboot_crc(data)
-                file_checksum = c_uint32.from_buffer_copy(m, start+d.length).value
-                if checksum != file_checksum:
-                    try_error("Stored OSK checksum (0x%08x) does not match calculated checksum (0x%08x)" % (file_checksum, checksum))
                 w.write(data)
 
         m.close()
