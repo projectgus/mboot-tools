@@ -3,6 +3,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <libgen.h>
@@ -37,25 +38,32 @@ static const char *flags[] = {
 };
 
 
+#define SD_MAGIC "update"
 #define SD_HEADER_SIZE 512*1024
 
 // files are arranged in block order, with NULL for any block not to be added
 int pack_osk(const char *oskfile, const char **files, int for_sd) {
-  int fd = open(oskfile, O_RDWR|O_CREAT, 00644);
+  int fd = open(oskfile, O_RDWR|O_CREAT|O_TRUNC, 00644);
   if(fd<0)
     handle_error("open output failed");
 
-  size_t old_size = sizeof(struct header);
-  struct header *map = mmap(NULL, old_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-  if(map == MAP_FAILED) {
-    handle_error("mmap failed");
+  if(for_sd) { // write SD card pseudo-header if needed
+    write(fd, SD_MAGIC, sizeof(SD_MAGIC));
+    uint8_t zero = 0;
+    for(int p = sizeof(SD_MAGIC); p < SD_HEADER_SIZE; p++) {
+      write(fd, &zero, 1);
+    }
   }
 
-  memset(map, 0, sizeof(struct header));
-  map->magic = MAGIC;
-  map->magic2 = MAGIC2;
+  struct header header;
+  memset(&header, 0, sizeof(struct header));
+  header.magic = MAGIC;
+  header.magic2 = MAGIC2;
+
+  write(fd, &header, sizeof(header)); // Initial header mostly invalid, will rewrite after
 
   int start_block = 1;
+  lseek(fd, 512 + (for_sd ? SD_HEADER_SIZE : 0), SEEK_SET);
 
   for(int i = 0; i < NUM_BLOCKS; i++) {
     if(!files[i])
@@ -71,47 +79,46 @@ int pack_osk(const char *oskfile, const char **files, int for_sd) {
     if (fstat(input, &sb) == -1)
       handle_error("fstat on input failed");
 
+    // Copy file into .osk output
     int end_block = start_block + (sb.st_size / 512) + 1;
-    map = mremap(map, old_size, end_block*512, MREMAP_MAYMOVE);
-    old_size = end_block*512;
-    if(input < 0) {
-      handle_error("failed to remap file to new length");
+    void *buf = malloc(sb.st_size);
+    if(!buf) {
+      handle_error("failed to allocate memory to read input file");
     }
-
-    struct block_descriptor *desc = &map->desc[i];
-    uint8_t *bytes = (uint8_t *)map;
-    uint32_t start_offs = start_block * 512;
-
-    memset(&bytes[start_offs], 0xFF, (end_block-start_block)*512);
-    ssize_t r = read(input, &bytes[start_offs], sb.st_size);
+    ssize_t r = read(input, buf, sb.st_size);
     if(r < sb.st_size) {
       handle_error("failed to read from input file");
     }
+    write(fd, buf, sb.st_size);
     close(input);
 
+    // Write checksum to .osk
+    uint32_t checksum = mboot_checksum(buf, sb.st_size);
+    free(buf);
+    write(fd, &checksum, sizeof(checksum));
+
+    // pad to block boundary
+    uint8_t pad = 0xFF;
+    for(int p = start_block*512 + sb.st_size + sizeof(checksum); p < end_block*512; p++)
+      write(fd, &pad, 1);
+
+    // update header
+    struct block_descriptor *desc = &header.desc[i];
     desc->length = sb.st_size;
     desc->start = start_block;
     desc->end = end_block;
     memcpy(desc->flags, flags[i], sizeof(desc->flags));
 
-    *(uint32_t *)&bytes[start_offs + sb.st_size] = mboot_checksum(&bytes[start_offs], sb.st_size);
     start_block = end_block;
   }
 
-  map->length = old_size;
+  header.length = start_block*512;
 
-  // If we need to prepend a 512k "for SD card" header, we do it here
-  // this is probably a silly way to do it, given we're file backed and all, but what the hey
-  printf("Prepending SD card header...\n");
-  map = mremap(map, old_size, old_size+SD_HEADER_SIZE, MREMAP_MAYMOVE);
-  memmove(&((uint8_t*)map)[SD_HEADER_SIZE], map, old_size);
-  memset(map, 0, SD_HEADER_SIZE);
-  strcpy((char *)map, "update");
+  // write out the full, updated, header again
+  lseek(fd, for_sd ? SD_HEADER_SIZE : 0, SEEK_SET);
+  write(fd, &header, sizeof(header));
 
-  old_size += SD_HEADER_SIZE;
-  munmap(map, old_size);
   close(fd);
-
   printf("Success.\n");
   return 0;
 }
