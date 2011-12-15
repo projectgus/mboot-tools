@@ -58,7 +58,10 @@ int pack_osk(const char *oskfile, const char **files, int for_sd) {
   struct header header;
   memset(&header, 0, sizeof(struct header));
   header.magic = MAGIC;
-  header.magic2 = MAGIC2;
+  for(int i = 0; i < NUM_BLOCKS; i++) {
+    if(files[i])
+      header.update_mask |= 1<<i;
+  }
 
   write(fd, &header, sizeof(header)); // Initial header mostly invalid, will rewrite after
 

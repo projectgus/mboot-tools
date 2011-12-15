@@ -3,7 +3,6 @@
 
 
 #define MAGIC 0x62347833
-#define MAGIC2 0x00000781 // This may turn out to mean something, I don't know what yet
 
 // Each .osk file contains one or more "blocks" of data that are copied to the internal mmc
 struct block_descriptor {
@@ -28,11 +27,11 @@ static const char* blocks[] = {
 
 // Header at beginning of .osk file
 struct header {
-  uint32_t magic;      // set to MAGIC
-  uint32_t length;     // total length of .osk file, in bytes
-  uint32_t zeroes[4];  // ???
-  uint32_t magic2;     // set to MAGIC2, might mean something??
-  uint32_t more_zero;  // ???
+  uint32_t magic;       // set to MAGIC
+  uint32_t length;      // total length of .osk file, in bytes
+  uint32_t zeroes[4];   // ???
+  uint32_t update_mask; // bit is set for each block that is to be updated
+  uint32_t more_zero;   // ???
   struct block_descriptor desc[NUM_BLOCKS]; // block descriptors
 
   // After this, file is padded to 0x200 (start=1) and then normal data appears

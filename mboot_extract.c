@@ -27,25 +27,33 @@ int extract_osk(const char *filepath, int force) {
   }
 
   if(map->magic != MAGIC) {
-    fprintf(stderr, "Magic number 0x%lx doesn't match expected 0x%lx. Not an .osk file?\n", map->magic, MAGIC);
-    if(!force) return 1;
-  }
-  if(map->magic2 != MAGIC2) {
-    fprintf(stderr, "Magic number 0x%lx doesn't match expected 0x%lx. Not an .osk file?\n", map->magic2, MAGIC2);
+    fprintf(stderr, "Magic number 0x%x doesn't match expected 0x%x. Not an .osk file?\n", map->magic, MAGIC);
     if(!force) return 1;
   }
   if(map->length != sb.st_size) {
-    fprintf(stderr, "Stored size 0x%lx doesn't match expected size 0x%lx. Corrupt .osk file?\n",
+    fprintf(stderr, "Stored size 0x%x doesn't match expected size 0x%zx. Corrupt .osk file?\n",
             map->length, sb.st_size);
     if(!force) return 1;
   }
 
   for(int i = 0; i < NUM_BLOCKS; i++) {
     struct block_descriptor *desc = &map->desc[i];
-    if(desc->start == 0 || desc->end == 0 || desc->length == 0) {
+
+    int valid_block = desc->start || desc->end || desc->length;
+    int masked_in = map->update_mask & 1<<i;
+    if(!masked_in && !valid_block) {
       printf("Skipping disused block %d: %s\n", i, blocks[i]);
       continue;
     }
+    if((masked_in != 0) != (valid_block != 0)) {
+      if(masked_in)
+        printf("According to the update mask, there should be an update for block %d. But none is here.\n", i);
+      else
+        printf("According to the update mask, there is no update for block %d. However some offsets are defined here anyhow.\n", i);
+      if(!force) return 1;
+      continue;
+    }
+
 
     printf("Extracting block %d to %s.bin ...\n", i, blocks[i]);
 
@@ -53,7 +61,7 @@ int extract_osk(const char *filepath, int force) {
     uint32_t stored_checksum = *((uint32_t *)&start[desc->length]);
     uint32_t calc_checksum = mboot_checksum(start, desc->length);
     if(stored_checksum != calc_checksum) {
-      fprintf(stderr, "Calculated checksum 0x%lx doesn't match stored checksum 0x%lx. Invalid data?\n",
+      fprintf(stderr, "Calculated checksum 0x%x doesn't match stored checksum 0x%x. Invalid data?\n",
               calc_checksum, stored_checksum);
       if(!force) return 1;
     }
@@ -75,7 +83,7 @@ int extract_osk(const char *filepath, int force) {
 
 int main(int argc, char **argv) {
 
-  if(argc==3 && !strcmp(argv[1], "--force") || argc > 3 || argc == 1) {
+  if( (argc==3 && !strcmp(argv[1], "--force")) || argc > 3 || argc == 1) {
     fprintf(stderr, "Usage: %s [--force] <osk file>\n", argv[0]);
     return 1;
   }
