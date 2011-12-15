@@ -31,14 +31,16 @@ static const char *flags[] = {
   "11018180", // 9 = system (ext2)
   "01018181", // 10 = app (ext2)
   "11018180", // 11 = sysconfig (GUESS)
-  "110180", // 12 = reserved3 (GUESS)
+  "11018080", // 12 = reserved3 (GUESS)
   "11018180", // 13 = reserved4 (GUESS)
   "11018180", // 14 = userdata  (GUESS)
 };
 
 
+#define SD_HEADER_SIZE 512*1024
+
 // files are arranged in block order, with NULL for any block not to be added
-int pack_osk(const char *oskfile, const char **files) {
+int pack_osk(const char *oskfile, const char **files, int for_sd) {
   int fd = open(oskfile, O_RDWR|O_CREAT, 00644);
   if(fd<0)
     handle_error("open output failed");
@@ -97,6 +99,16 @@ int pack_osk(const char *oskfile, const char **files) {
   }
 
   map->length = old_size;
+
+  // If we need to prepend a 512k "for SD card" header, we do it here
+  // this is probably a silly way to do it, given we're file backed and all, but what the hey
+  printf("Prepending SD card header...\n");
+  map = mremap(map, old_size, old_size+SD_HEADER_SIZE, MREMAP_MAYMOVE);
+  memmove(&((uint8_t*)map)[SD_HEADER_SIZE], map, old_size);
+  memset(map, 0, SD_HEADER_SIZE);
+  strcpy((char *)map, "update");
+
+  old_size += SD_HEADER_SIZE;
   munmap(map, old_size);
   close(fd);
 
@@ -119,12 +131,14 @@ static int get_block_index(const char *filename)
 
 int main(int argc, const char **argv) {
   if(argc < 3) {
-    fprintf(stderr, "Usage: %s <osk output file> <input files>...\n", argv[0]);
+    fprintf(stderr, "Usage: %s [--for-sd] <osk output file> <input files>...\n", argv[0]);
   }
+
+  int for_sd = !strcmp(argv[1], "--for-sd");
 
   // Rearrange the input files into "block order"
   const char *files[NUM_BLOCKS] = { 0 };
-  for(int i = 2; i < argc; i++) {
+  for(int i = for_sd ? 3 : 2; i < argc; i++) {
     int block_idx = get_block_index(argv[i]);
     if(block_idx < 0) {
       fprintf(stderr, "Failed to identify block type of file %s.\n", argv[i]);
@@ -133,5 +147,5 @@ int main(int argc, const char **argv) {
     files[block_idx] = argv[i];
   }
 
-  return pack_osk(argv[1], files);
+  return pack_osk(argv[for_sd ? 2 : 1], files, for_sd);
 }
