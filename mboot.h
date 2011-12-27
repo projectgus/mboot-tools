@@ -24,7 +24,7 @@ struct block_descriptor {
 // Blocks which aren't part of an .osk file (ie not to be reflashed) have their descriptors zeroed out
 static const char* blocks[] = {
   "mboot", "configfile", "globaldata", "logo", "reserved1", "reserved2", "recovery", "kernel",
-  "ramdisk", "system", "app", "sysconfig", "reserved3", "reserved4", "userdata"
+  "ramdisk", "system", "app", "sysconfig", "reserved3", "reserved4", "userdata", "fat"
 };
 
 #define NUM_BLOCKS sizeof(blocks)/sizeof(char *)

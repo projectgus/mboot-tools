@@ -54,6 +54,7 @@ static const char *flags[] = {
   "11018080", // 12 = reserved3 (GUESS)
   "11018180", // 13 = reserved4 (GUESS)
   "11018180", // 14 = userdata  (GUESS)
+  "11018180", // 15 = fat  (GUESS)
 };
 
 
