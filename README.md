@@ -22,18 +22,62 @@ These programs were created by blackbox reverse engineering only.
 Don't blame me if you build an update and brick your device. I make
 absolutely no guarantees that this will work at all, in any way.
 
+However, I haven't managed to brick anything yet so that's a good sign at least. :)
 
 Example Use
 ===========
 
-./mboot_unpack my_firmware_file.osk
+## Unpacking a firmare .osk file
+
+  ./mboot_extract my_firmware_file.osk
 
 (creates numerous .bin files which you can edit/replace as appropriate)
 
-sudo ./mboot_pack --for-sd /dev/sdc *.bin
+## Recreating a firmware .osk file
 
-(will write the .osk, plus an SD "update" header, directly to SD card)
+  ./mboot_pack my_awesome_firmware.osk kernel.bin system.bin ramdisk.bin app.bin
 
+(picks up the .bin files, except for mboot - reflashing bootloaders is dangerous and silly - and makes them back into a firmware.)
+
+## Creating an SD card image
+
+  ./mboot_pack --for-sd /dev/sdc kernel.bin system.bin ramdisk.bin app.bin
+
+(will write the .osk, plus an SD "update" header, directly to SD card at /dev/sdc. Same as if you used the Windows-based "SDTool" to make one. Anything already on the SD card will be erased.)
+
+
+## Reflashing a new kernel
+
+Once you have your kernel configured to build:
+
+  sb2 make zImage # <-- replace with whatever make args you need for ARM kernels, I'm using [sb2](http://www.plugcomputer.org/plugwiki/index.php/Scratchbox2_based_cross_compiling)
+  ln -s arch/arm/boot/zImage kernel.bin
+  mboot_pack --for-sd /dev/sdc kernel.bin
+
+(The kernel.bin symlink is so mboot_pack knows this file is the kernel. The last line will create an SD card image that just flashes a new kernel and leaves everything else alone, except for the data partition which for some reason is always formatted.)
+
+
+About .osk files
+================
+
+.OSK files are an aggregate of images that will flash the device. Can contain any/all of these:
+
+* Filesystem images (ie system.bin is an image of /system and app.bin is an image of /system/app)
+* Kernel image (kernel.bin is a zImage)
+* initrd image (ramdisk.bin is an initrd with a uboot header affixed!)
+* mboot image (mboot.bin is the mboot bootloader binary. Reflash at own risk!)
+
+Each part of the .osk is called a "block" in mboot-tools. The .osk file
+has a header which describes which "blocks" are present in the .osk
+file, and what the .osk file layout is.
+
+When an update is applied to the system, the .osk file is read and the
+blocks in it are copied to the internal flash. The layout of the
+internal flash is *not described* in the .osk file.
+
+The above types of blocks are all the components I've seen, although
+lots of others appear to be defined in mboot. It would be risky to create .osk
+files containing these other types, though.
 
 Status
 ======
@@ -52,27 +96,7 @@ The following things remain unknown:
 * How to enable any interactive booting mode in the bootloader (currently it prompts on serial with timeout=0).
 * How to boot from external SD slot instead of internal eMMC chip.
 * How to modify 'configfile' or any of the other "block types" marked with "(GUESS)" in mboot.c.
-* How the formatting of "partition 4" (aka '/data') or "partition 1" (aka vold /mnt/flash) is controlled.
-
-About .osk files
-================
-
-.OSK files are an aggregate of images that will flash the device. Can contain any/all of these:
-
-* Filesystem images (ie /system or /systema/app)
-* Kernel image (zImage)
-* initrd image (with uboot header for some reason!)
-* mboot image (raw binary)
-* ... etc
-
-In these programs, each of these images is a "block". The .osk file
-has a header which describes which "blocks" are present in the .osk
-file, and what the .osk file layout is.
-
-When an update is applied to the system, the .osk file is read and the
-blocks in it are copied to the internal flash. The layout of the
-internal flash is *not described* in the .osk file.
-
+* How the formatting of "partition 4" (aka '/data') or "partition 1" (aka vold /mnt/flash) is controlled. At the moment any update via the SD card causes /mnt/flash to be reformatted fresh.
 
 
 LICENSE
