@@ -29,19 +29,19 @@ Example Use
 
 ## Unpacking a firmare .osk file
 
-  ./mboot_extract my_firmware_file.osk
+    ./mboot_extract my_firmware_file.osk
 
 (creates numerous .bin files which you can edit/replace as appropriate)
 
 ## Recreating a firmware .osk file
 
-  ./mboot_pack my_awesome_firmware.osk kernel.bin system.bin ramdisk.bin app.bin
+    ./mboot_pack my_awesome_firmware.osk kernel.bin system.bin ramdisk.bin app.bin
 
-(picks up the .bin files, except for mboot - reflashing bootloaders is dangerous and silly - and makes them back into a firmware.)
+(picks up some of the .bin files and makes them back into a firmware image.)
 
 ## Creating an SD card image
 
-  ./mboot_pack --for-sd /dev/sdc kernel.bin system.bin ramdisk.bin app.bin
+    ./mboot_pack --for-sd /dev/sdc kernel.bin system.bin ramdisk.bin app.bin
 
 (will write the .osk, plus an SD "update" header, directly to SD card at /dev/sdc. Same as if you used the Windows-based "SDTool" to make one. Anything already on the SD card will be erased.)
 
@@ -50,9 +50,9 @@ Example Use
 
 Once you have your kernel configured to build:
 
-  sb2 make zImage # <-- replace with whatever make args you need for ARM kernels, I'm using [sb2](http://www.plugcomputer.org/plugwiki/index.php/Scratchbox2_based_cross_compiling)
-  ln -s arch/arm/boot/zImage kernel.bin
-  mboot_pack --for-sd /dev/sdc kernel.bin
+    sb2 make zImage # <-- replace with whatever make args you need for ARM kernels, I'm using [sb2](http://www.plugcomputer.org/plugwiki/index.php/Scratchbox2_based_cross_compiling)
+    ln -s arch/arm/boot/zImage kernel.bin
+    mboot_pack --for-sd /dev/sdc kernel.bin
 
 (The kernel.bin symlink is so mboot_pack knows this file is the kernel. The last line will create an SD card image that just flashes a new kernel and leaves everything else alone, except for the data partition which for some reason is always formatted.)
 
@@ -73,11 +73,18 @@ file, and what the .osk file layout is.
 
 When an update is applied to the system, the .osk file is read and the
 blocks in it are copied to the internal flash. The layout of the
-internal flash is *not described* in the .osk file.
+internal flash is *not described* in the .osk header.
 
 The above types of blocks are all the components I've seen, although
 lots of others appear to be defined in mboot. It would be risky to create .osk
 files containing these other types, though.
+
+Important: when using mboot_pack, it is not recommended that you make
+.osk files including mboot.bin. Reflashing bootloaders is dangerous
+and silly, and just because the "stock" updates do it doesn't mean you
+should!
+
+
 
 Status
 ======
