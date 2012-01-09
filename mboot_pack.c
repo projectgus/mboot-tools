@@ -31,14 +31,12 @@
 
 static int get_block_index(const char *filename);
 
-// Flags on each block are poorly understood at this point...
-
-// New theory: looks like the second set of flags may be a version number. mboot version is '160'
-// and versions in some other files seem older...
+// I initially thought some of these values were flags, but now I think they're just
+// version numbers.
 //
-// TODO: Check if older firmware updates will apply over newer ones
-//       Check if changing initial set of flags alters the "format partition after install" behaviour?
-static const char *flags[] = {
+// The version numbers appear to be ignored by mboot, here they are just hardcoded to
+// likely sounding values.
+static const char *versions[] = {
   "1100160\0", // 0 = mboot
   "11018180", // 1 = configfile
   "11018180", // 2 = globaldata (GUESS)
@@ -130,7 +128,7 @@ int pack_osk(const char *oskfile, const char **files, int for_sd) {
     desc->length = sb.st_size;
     desc->start = start_block;
     desc->end = end_block;
-    memcpy(desc->flags, flags[i], sizeof(desc->flags));
+    memcpy(desc->version, versions[i], sizeof(desc->version));
 
     start_block = end_block;
   }

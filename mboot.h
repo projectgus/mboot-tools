@@ -14,7 +14,7 @@ struct block_descriptor {
   uint32_t start;      // data start offset in .osk file, unit is 512-byte blocks
   uint32_t end;        // data end offset in .osk file, unit is 512-byte blocks
   uint32_t length;     // data length in .osk file, unit is bytes
-  char flags[8];       // "flags" appear to be ASCII numbers, don't know why or what yet
+  char version[8];       // "version" is just an ASCII string describing the version, no known use
   uint32_t zeroes[2];  // ???
 };
 
